@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chatbot</title>
+  <meta name="description" content="A professional AI chatbot web app with multi-provider support, local chat history, uploads, export, and streaming responses." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-badge">AI</div>
+        <div>
+          <h1>AI Chatbot</h1>
+          <p>Multi-provider assistant studio</p>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="section-title">Chat History</div>
+        <div class="field chats-search">
+          <input id="chatSearch" type="search" placeholder="Search chats..." />
+        </div>
+        <div id="chatList" class="chat-list"></div>
+      </div>
+
+      <div class="panel-card">
+        <div class="section-title">Files & Memory</div>
+        <div class="field">
+          <button id="fileBtn" class="btn primary" type="button">📎 Add Files</button>
+          <input id="fileInput" type="file" multiple accept=".txt,.md,.csv,.json,.log,.pdf" hidden>
+        </div>
+        <div id="fileChips" class="chip-list"></div>
+      </div>
+
+      <div class="sidebar-footer">
+        <button id="newChat" class="btn primary" type="button">＋ New Chat</button>
+        <button id="deleteChat" class="btn danger" type="button">🗑 Delete Chat</button>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="pill" id="statusProvider">Provider: —</div>
+          <div class="pill" id="statusModel">Model: —</div>
+          <div class="pill" id="statusChat">Chat: —</div>
+        </div>
+        <div class="topbar-middle">
+          <button id="compareToggle" class="btn small" type="button">Compare: OFF</button>
+          <button id="quickPrompt" class="btn small" type="button">✨ Quick Prompt</button>
+        </div>
+        <div class="topbar-right">
+          <button id="exportTxt" class="btn small" type="button">Export TXT</button>
+          <button id="exportPdf" class="btn small" type="button">Export PDF</button>
+          <button id="themeToggle" class="btn small" type="button">☾ Dark</button>
+        </div>
+      </div>
+
+      <div class="topbar" style="gap:12px;">
+        <div class="topbar-left" style="flex: 1 1 280px;">
+          <div class="field" style="min-width: 160px;">
+            <label>Provider</label>
+            <select id="provider">
+              <option value="gemini">Google Gemini</option>
+              <option value="openai">OpenAI</option>
+              <option value="xai">xAI / Grok</option>
+            </select>
+          </div>
+          <div class="field" style="min-width: 200px;">
+            <label>API Key</label>
+            <input id="apiKey" type="password" placeholder="Paste your API key here" autocomplete="off">
+          </div>
+          <div class="field" style="min-width: 170px;">
+            <label>Model</label>
+            <select id="model"></select>
+          </div>
+          <div id="customModelWrap" class="field" style="min-width: 190px; display:none;">
+            <label>Custom Model</label>
+            <input id="customModel" type="text" placeholder="Enter model name">
+          </div>
+          <div class="field" style="min-width: 150px;">
+            <label>Language</label>
+            <select id="language">
+              <option value="Auto">Auto</option>
+              <option value="English">English</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Hindi">Hindi</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="field" style="min-width: 150px;">
+            <label>Compare Provider</label>
+            <select id="providerB">
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="xai">xAI / Grok</option>
+            </select>
+          </div>
+          <div class="field" style="min-width: 180px;">
+            <label>Compare Model</label>
+            <select id="modelB"></select>
+          </div>
+          <div id="customModelBWrap" class="field" style="min-width: 190px; display:none;">
+            <label>Custom Model B</label>
+            <input id="customModelB" type="text" placeholder="Enter model name">
+          </div>
+        </div>
+      </div>
+
+      <div class="topbar" style="gap:12px;">
+        <div class="topbar-left" style="flex-wrap: wrap;">
+          <div class="field" style="min-width: 230px;">
+            <label>Temperature</label>
+            <input id="temperature" type="text" value="0.7">
+          </div>
+          <div class="field" style="min-width: 230px;">
+            <label>Max Tokens</label>
+            <input id="maxTokens" type="text" value="1200">
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button id="voiceBtn" class="btn small" type="button">🎙 Voice</button>
+          <button id="stop" class="btn small danger" type="button">⏹ Stop</button>
+          <button id="send" class="btn primary small" type="button">Send</button>
+        </div>
+      </div>
+
+      <div id="chatArea" class="chat-area">
+        <div id="messages" class="messages"></div>
+      </div>
+
+      <div class="composer">
+        <div class="composer-inner">
+          <div class="field">
+            <label>System Prompt</label>
+            <textarea id="systemPrompt" placeholder="Guide the assistant's behavior here..."></textarea>
+          </div>
+
+          <div class="chat-input-row">
+            <div class="field" style="margin-bottom:0;">
+              <label>Your message</label>
+              <textarea id="prompt" placeholder="Ask anything... (Enter to send, Shift+Enter for a new line)"></textarea>
+            </div>
+            <div class="input-actions">
+              <button id="send2" class="btn primary" type="button" style="display:none;"></button>
+            </div>
+          </div>
+
+          <div class="status-bar">
+            <span id="statusMessage" class="status-pill">Ready</span>
+            <span id="statusFiles" class="status-pill">Files: 0</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="compareBackdrop" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 style="margin:0;">Compare Responses</h2>
+        <button id="compareClose" class="btn small" type="button">Close</button>
+      </div>
+      <div id="compareResults" class="compare-grid"></div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
